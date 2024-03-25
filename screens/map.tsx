@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import MapView, { MapMarker } from 'react-native-maps';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View, ToastAndroid } from 'react-native';
 import * as Location from 'expo-location';
-import { NavigationContainer, StackActions } from "@react-navigation/native";
 import mapConfig from '../mapconfig.json';
 
-export default function Map({navigation}) {
+export default function Map({ navigation }) {
+  const [mapView, setMapView] = useState(null);
   const [location, setLocation] = useState(null);
-  const [camera, setCamera] = useState(null);
+  const [camera, setRawCamera] = useState(null);
   const [previousDragX, setPreviousDragX] = useState(null);
   const [dragResetTimeoutId, setDragResetTimeoutId] = useState(null);
   const [dog, setDog] = useState({
@@ -17,17 +17,7 @@ export default function Map({navigation}) {
 
   useEffect(() => {
     (async () => {
-      
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
-      console.log(location);
-      createDog(location.coords.latitude, location.coords.longitude);
+      await initializeLocationTracking();
     })();
   }, []);
 
@@ -39,15 +29,46 @@ export default function Map({navigation}) {
           longitude: location.coords.longitude,
         },
         pitch: 60,
-        heading: 20,
+        heading: camera ? camera.heading : location.coords.heading,
         altitude: 1000,
         zoom: 19.2,
       });
-      console.log(location);
     }
   }, [location]);
 
+  const setCamera = (newCamera, animate = true) => {
+    setRawCamera(newCamera);
+    if (animate) {
+      mapView.animateCamera(newCamera);
+    } else {
+      mapView.setCamera(newCamera);
+    }
+      
+  }
+
+  const initializeLocationTracking = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      ToastAndroid.show('Permission to access location was denied', ToastAndroid.SHORT);
+      return;
+    }
+
+    await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 1
+      },
+      (location) => {
+        setLocation(location);
+      }
+    );
+  };
+
+
   const rotate = (e) => {
+    if(!camera) return;
+
     if (dragResetTimeoutId) {
       clearInterval(dragResetTimeoutId);
     }
@@ -59,7 +80,7 @@ export default function Map({navigation}) {
       setCamera({
         ...camera,
         heading: newHeading,
-      });
+      }, false);
     }
     
     setPreviousDragX(e.nativeEvent.position.x);
@@ -91,8 +112,8 @@ export default function Map({navigation}) {
   return (
     <View style={styles.container}>
       <MapView
+        ref={setMapView}
         style={styles.map}
-        camera={camera}
         rotateEnabled={true}
         scrollEnabled={false}
         zoomEnabled={false}
@@ -102,7 +123,7 @@ export default function Map({navigation}) {
         // zoomTapEnabled={false}
         // showsPointsOfInterest={false}
         // // scrollEnabled={false}
-        // showsUserLocation={true}
+        showsUserLocation={true}
         showsBuildings={true}
         
         showsCompass={false}
