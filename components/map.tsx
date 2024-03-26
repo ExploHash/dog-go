@@ -1,15 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import MapView, { MapMarker } from 'react-native-maps';
-import { Image, StyleSheet, View, ToastAndroid } from 'react-native';
-import * as Location from 'expo-location';
-import mapConfig from '../mapconfig.json';
+import * as Location from "expo-location";
+import React, { useState, useEffect } from "react";
+import { Image, StyleSheet, View, ToastAndroid } from "react-native";
+import MapView, { MapMarker } from "react-native-maps";
 
-export default function Map({ navigation }) {
+import mapConfig from "../mapconfig.json";
+
+const initialCamera = {
+  center: {
+    latitude: 37.78825,
+    longitude: -122.4324,
+  },
+  pitch: 60,
+  heading: 0,
+  altitude: 1000,
+  zoom: 19.2,
+};
+
+export default function Map({ navigation, style }) {
   const [mapView, setMapView] = useState(null);
   const [location, setLocation] = useState(null);
-  const [camera, setRawCamera] = useState(null);
+  const [camera, setRawCamera] = useState(initialCamera);
   const [previousDragX, setPreviousDragX] = useState(null);
   const [dragResetTimeoutId, setDragResetTimeoutId] = useState(null);
+
   const [dog, setDog] = useState({
     latitude: 0,
     longitude: 0,
@@ -43,13 +56,15 @@ export default function Map({ navigation }) {
     } else {
       mapView.setCamera(newCamera);
     }
-      
-  }
+  };
 
   const initializeLocationTracking = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      ToastAndroid.show('Permission to access location was denied', ToastAndroid.SHORT);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      ToastAndroid.show(
+        "Permission to access location was denied",
+        ToastAndroid.SHORT,
+      );
       return;
     }
 
@@ -57,17 +72,16 @@ export default function Map({ navigation }) {
       {
         accuracy: Location.Accuracy.BestForNavigation,
         timeInterval: 1000,
-        distanceInterval: 1
+        distanceInterval: 1,
       },
       (location) => {
         setLocation(location);
-      }
+      },
     );
   };
 
-
   const rotate = (e) => {
-    if(!camera) return;
+    // if(!camera) return;
 
     if (dragResetTimeoutId) {
       clearInterval(dragResetTimeoutId);
@@ -77,12 +91,15 @@ export default function Map({ navigation }) {
       const diff = e.nativeEvent.position.x - previousDragX;
       const newHeading = camera.heading + diff / 5;
 
-      setCamera({
-        ...camera,
-        heading: newHeading,
-      }, false);
+      setCamera(
+        {
+          ...camera,
+          heading: newHeading,
+        },
+        false,
+      );
     }
-    
+
     setPreviousDragX(e.nativeEvent.position.x);
 
     // Reset drag after 1 second
@@ -91,70 +108,52 @@ export default function Map({ navigation }) {
     }, 50);
 
     setDragResetTimeoutId(timeoutId);
-  }
-
-  const onPress = (e) => {
-    console.log(e.nativeEvent);
-  }
+  };
 
   const dogPress = () => {
-    console.log('dog');
-    navigation.navigate('Catcher');
-  }
+    console.log("dog");
+    navigation.navigate("Catcher");
+  };
 
   const createDog = (lat, long) => {
     setDog({
       latitude: lat,
       longitude: long,
     });
-  }
+  };
 
   return (
-    <View style={styles.container}>
-      <MapView
-        ref={setMapView}
-        style={styles.map}
-        rotateEnabled={true}
-        scrollEnabled={false}
-        zoomEnabled={false}
-        onPanDrag={rotate}
-        onLongPress={onPress}
-        customMapStyle={mapConfig}
-        // zoomTapEnabled={false}
-        // showsPointsOfInterest={false}
-        // // scrollEnabled={false}
-        showsUserLocation={true}
-        showsBuildings={true}
-        
-        showsCompass={false}
-        showsMyLocationButton={false}
-        // rotateEnabled={true}
-        // scrollDuringRotateOrZoomEnabled={false}
-        // pitchEnabled={true}
-      >
-        <MapMarker
-          coordinate={dog}
-          onPress={dogPress}
-        >
-          <View>
-            <Image
-              source={require('../assets/dog.png')}
-              style={{ width: 40, height: 40 }}
-            />
-          </View>
-        </MapMarker>
-      </MapView>
-     
-    </View>
+    <MapView
+      ref={setMapView}
+      style={style}
+      rotateEnabled
+      scrollEnabled={false}
+      zoomEnabled={false}
+      onPanDrag={rotate}
+      customMapStyle={mapConfig}
+      initialCamera={initialCamera}
+      showsUserLocation
+      showsBuildings
+      showsCompass={false}
+      showsMyLocationButton={false}
+      liteMode
+    >
+      <MapMarker coordinate={dog} onPress={dogPress}>
+        <View>
+          <Image
+            source={require("../assets/dog.png")}
+            style={{ width: 40, height: 40 }}
+          />
+        </View>
+      </MapMarker>
+    </MapView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   map: {
-    width: '100%',
-    height: '100%',
+    position: "absolute",
+    width: "100%",
+    height: "100%",
   },
 });

@@ -1,40 +1,28 @@
-import { StatusBar, StyleSheet, Text, View } from "react-native";
-import * as React from "react";
 import { NavigationContainer, StackActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import {  useEffect } from "react";
-import Map from "./screens/map";
-import { Catcher } from "./screens/catcher";
+import * as React from "react";
+import { useEffect } from "react";
+import { StatusBar, StyleSheet, Text, View } from "react-native";
 
+import Map from "./components/map";
+import { CatcherScreen } from "./screens/catcher";
+import { MainScreen } from "./screens/main";
+import { DatabaseService } from "./services/database";
 
 const Stack = createNativeStackNavigator();
 
-
 export default function App() {
-
   return (
-    <>
-       <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={
-            {
-             headerShown: false
-            }
-          }
-          >
-            <Stack.Screen
-          name="Map"
-          component={Map}
-        />
-        <Stack.Screen
-          name="Catcher"
-          component={Catcher} 
-        />
-          </Stack.Navigator>
-          
-        </NavigationContainer>
-    </>
-       
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="Catcher" component={CatcherScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
@@ -43,7 +31,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
     fontSize: 16,
     fontWeight: "bold",
-    color: "#fff"
+    color: "#fff",
   },
   container: {
     flex: 1,
