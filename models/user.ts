@@ -40,4 +40,12 @@ export class UserModel {
   get experienceNeeded() {
     return startLevelXpAmount * Math.pow(this.level, exponentialRate);
   }
+
+  copy(): UserModel {
+    const model = new UserModel();
+    model.level = this.level;
+    model.currentXp = this.currentXp;
+
+    return model;
+  }
 }

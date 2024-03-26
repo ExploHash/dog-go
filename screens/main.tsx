@@ -7,25 +7,20 @@ import { UserModel } from "../models/user";
 import { DatabaseService } from "../services/database";
 
 export function MainScreen({ navigation }) {
-  const [level, setLevel] = useState(0);
-  const [currentXp, setCurrentXp] = useState(0);
-  const [targetXp, setTargetXp] = useState(0);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     (async () => {
       await DatabaseService.initializeDatabase();
-      await upXp();
+      const user = await UserModel.get();
+      setUser(user);
     })();
   }, []);
 
   const upXp = async () => {
-    // TODO: maybe static is a better way to handle this
-    const user = await UserModel.get();
     user.experience(10);
     await user.save();
-    setLevel(user.level);
-    setCurrentXp(user.currentXp);
-    setTargetXp(user.experienceNeeded);
+    setUser(user.copy());
   };
 
   return (
@@ -35,9 +30,9 @@ export function MainScreen({ navigation }) {
       <LevelViewer
         onTouchStart={upXp}
         styles={styles.levelViewer}
-        level={level}
-        currentXp={currentXp}
-        targetXp={targetXp}
+        level={user?.level}
+        currentXp={user?.currentXp}
+        targetXp={user?.experienceNeeded}
       />
     </View>
   );
