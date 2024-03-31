@@ -3,7 +3,12 @@ import React, { useState, useEffect } from "react";
 import { Image, StyleSheet, View, ToastAndroid } from "react-native";
 import MapView, { MapMarker } from "react-native-maps";
 
-import mapConfig from "../mapconfig.json";
+import mapConfig from "../../config/mapconfig.json";
+import {
+  calculateCurrentShownDoggos,
+  useDoggoSpawner,
+} from "../hooks/use-doggo-spawner";
+import { SpawnedDog } from "../types";
 
 const initialCamera = {
   center: {
@@ -22,6 +27,7 @@ export default function Map({ navigation, style }) {
   const [camera, setRawCamera] = useState(initialCamera);
   const [previousDragX, setPreviousDragX] = useState(null);
   const [dragResetTimeoutId, setDragResetTimeoutId] = useState(null);
+  const [spawnedDogs, setSpawnedDogs] = useState<SpawnedDog[]>([]); // [SpawnedDog]
 
   const [dog, setDog] = useState({
     latitude: 0,
@@ -46,6 +52,17 @@ export default function Map({ navigation, style }) {
         altitude: 1000,
         zoom: 19.2,
       });
+
+      setSpawnedDogs(
+        calculateCurrentShownDoggos(
+          {
+            lat: location.coords.latitude,
+            long: location.coords.longitude,
+          },
+          Date.now(),
+          1,
+        ),
+      );
     }
   }, [location]);
 
@@ -111,15 +128,7 @@ export default function Map({ navigation, style }) {
   };
 
   const dogPress = () => {
-    console.log("dog");
     navigation.navigate("Catcher");
-  };
-
-  const createDog = (lat, long) => {
-    setDog({
-      latitude: lat,
-      longitude: long,
-    });
   };
 
   return (
@@ -141,11 +150,31 @@ export default function Map({ navigation, style }) {
       <MapMarker coordinate={dog} onPress={dogPress}>
         <View>
           <Image
-            source={require("../assets/dog.png")}
+            source={require("../../assets/dog.png")}
             style={{ width: 40, height: 40 }}
           />
         </View>
       </MapMarker>
+
+      {spawnedDogs.map((dog) => (
+        <MapMarker
+          key={dog.id}
+          coordinate={{
+            latitude: dog.geoPoint.lat,
+            longitude: dog.geoPoint.long,
+          }}
+          onPress={() => {
+            navigation.navigate("Catcher", { dog });
+          }}
+        >
+          <View>
+            <Image
+              source={{ uri: dog.imgSrc }}
+              style={{ width: 40, height: 40 }}
+            />
+          </View>
+        </MapMarker>
+      ))}
     </MapView>
   );
 }

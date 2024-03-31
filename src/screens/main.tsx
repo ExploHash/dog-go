@@ -1,26 +1,38 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
 
 import LevelViewer from "../components/level-viewer";
 import Map from "../components/map";
-import { UserModel } from "../models/user";
 import { DatabaseService } from "../services/database";
+import {
+  letUserExperience,
+  selectExperienceNeeded,
+  selectUser,
+} from "../state/reducer";
+import { AppDispatch } from "../state/store";
+import { getUser, saveUser } from "../state/thunks";
 
 export function MainScreen({ navigation }) {
-  const [user, setUser] = useState(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const user = useSelector(selectUser);
+  const experienceNeeded = useSelector(selectExperienceNeeded);
 
   useEffect(() => {
     (async () => {
       await DatabaseService.initializeDatabase();
-      const user = await UserModel.get();
-      setUser(user);
+      dispatch(getUser());
     })();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      dispatch(saveUser(user));
+    }
+  }, [user]);
+
   const upXp = async () => {
-    user.experience(10);
-    await user.save();
-    setUser(user.copy());
+    dispatch(letUserExperience(10));
   };
 
   return (
@@ -32,7 +44,7 @@ export function MainScreen({ navigation }) {
         styles={styles.levelViewer}
         level={user?.level}
         currentXp={user?.currentXp}
-        targetXp={user?.experienceNeeded}
+        targetXp={experienceNeeded}
       />
     </View>
   );
