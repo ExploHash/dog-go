@@ -17,7 +17,9 @@ const anchorGeoPoint = {
 
 export function useDoggoSpawner(location) {
   const user = useSelector(selectUser);
-  const [latestGeoPoint, setLatestGeoPoint] = useState<GeoPoint | null>(null);
+  const [latestSpawnGeoPoint, setLatestSpawnGeoPoint] =
+    useState<GeoPoint | null>(null);
+  const [lastSpawnTime, setLastSpawnTime] = useState<number | null>(null);
 
   useEffect(() => {
     if (location) {
@@ -69,9 +71,6 @@ export function calculateCurrentShownDoggos(
   );
 
   // Epand the doggos to spawn
-
-  console.log(JSON.stringify(doggosToSpawn, null, 2));
-
   return doggosToSpawn;
 }
 
@@ -108,17 +107,12 @@ function grabRandomDoggos(
     const max = average + 200;
     const level = Math.floor(randomGenerator() * (max - min)) + min;
 
-    // Randomnize the distance
-    const distance = randomGenerator() * 25;
-
-    // Randomize the heading
-    const heading = randomGenerator() * 360;
-
-    const { newLat, newLon } = addDistanceToLatLng(
+    // Add random 50 meter lat or lon distance
+    const { newLat, newLon } = addMetersDistanceToLatLng(
       currentGeoPoint.lat,
       currentGeoPoint.long,
-      distance,
-      heading,
+      randomGenerator() * 50,
+      randomGenerator() * 50,
     );
 
     spawnedDoggos.push({
@@ -289,6 +283,36 @@ function addDistanceToLatLng(
       Math.sin(headingRadians) * Math.sin(distRadians) * Math.cos(latRadians),
       Math.cos(distRadians) - Math.sin(latRadians) * Math.sin(newLatRadians),
     );
+
+  // Convert new latitude and longitude to degrees
+  const newLat = (newLatRadians * 180) / Math.PI;
+  const newLon = (newLonRadians * 180) / Math.PI;
+
+  return { newLat, newLon };
+}
+
+function addMetersDistanceToLatLng(
+  lat: number,
+  lon: number,
+  addLatMeters: number,
+  addLonMeters: number,
+): { newLat: number; newLon: number } {
+  const earthRadius = 6378137; // Earth's radius in meters
+
+  // Convert latitude and longitude to radians
+  const latRadians = (lat * Math.PI) / 180;
+  const lonRadians = (lon * Math.PI) / 180;
+
+  // Calculate the angular distance in radians
+  const latDistanceRadians = addLatMeters / earthRadius;
+  const lonDistanceRadians =
+    addLonMeters / (earthRadius * Math.cos(latRadians));
+
+  // Calculate the new latitude in radians
+  const newLatRadians = latRadians + latDistanceRadians;
+
+  // Calculate the new longitude in radians
+  const newLonRadians = lonRadians + lonDistanceRadians;
 
   // Convert new latitude and longitude to degrees
   const newLat = (newLatRadians * 180) / Math.PI;

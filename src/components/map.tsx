@@ -17,9 +17,10 @@ const initialCamera = {
   },
   pitch: 60,
   heading: 0,
-  altitude: 1000,
   zoom: 19.2,
 };
+
+let spawnIntervalId;
 
 export default function Map({ navigation, style }) {
   const [mapView, setMapView] = useState(null);
@@ -28,17 +29,30 @@ export default function Map({ navigation, style }) {
   const [previousDragX, setPreviousDragX] = useState(null);
   const [dragResetTimeoutId, setDragResetTimeoutId] = useState(null);
   const [spawnedDogs, setSpawnedDogs] = useState<SpawnedDog[]>([]); // [SpawnedDog]
-
-  const [dog, setDog] = useState({
-    latitude: 0,
-    longitude: 0,
-  });
+  const [updateNeeded, setUpdateNeeded] = useState(false);
 
   useEffect(() => {
+    // Initialize location tracking
     (async () => {
       await initializeLocationTracking();
     })();
+
+    // Create timer
+    if (spawnIntervalId) {
+      clearInterval(spawnIntervalId);
+    }
+
+    spawnIntervalId = setInterval(() => {
+      setUpdateNeeded(true);
+    }, 1000);
   }, []);
+
+  useEffect(() => {
+    if (updateNeeded) {
+      updateDoggos();
+      setUpdateNeeded(false);
+    }
+  }, [updateNeeded]);
 
   useEffect(() => {
     if (location) {
@@ -49,20 +63,8 @@ export default function Map({ navigation, style }) {
         },
         pitch: 60,
         heading: camera ? camera.heading : location.coords.heading,
-        altitude: 1000,
         zoom: 19.2,
       });
-
-      setSpawnedDogs(
-        calculateCurrentShownDoggos(
-          {
-            lat: location.coords.latitude,
-            long: location.coords.longitude,
-          },
-          Date.now(),
-          1,
-        ),
-      );
     }
   }, [location]);
 
@@ -127,15 +129,61 @@ export default function Map({ navigation, style }) {
     setDragResetTimeoutId(timeoutId);
   };
 
-  const dogPress = () => {
-    navigation.navigate("Catcher");
+  const updateDoggos = () => {
+    // If not location, return
+    if (!location) return;
+
+    // Working with a copy of the current doggos
+    let updateNeeded = false;
+    let updatedDogs = [...spawnedDogs];
+
+    // Remove doggos older than 5 minutes
+    const currentTime = Date.now();
+
+    const expiredDoggos = spawnedDogs.filter((dog) => {
+      const dogTime = new Date(dog.spawnedAt).getTime();
+      return currentTime - dogTime > 300000;
+    });
+
+    if (expiredDoggos.length > 0) {
+      updateNeeded = true;
+      updatedDogs = updatedDogs.filter(
+        (dog) => !expiredDoggos.find((expiredDog) => expiredDog.id === dog.id),
+      );
+    }
+
+    // First calculate the doggos for the area
+    const doggosForArea = calculateCurrentShownDoggos(
+      {
+        lat: location.coords.latitude,
+        long: location.coords.longitude,
+      },
+      Date.now(),
+      1,
+    );
+
+    // Check if there are new doggos
+    const newDoggos = doggosForArea.filter(
+      (dog) => !updatedDogs.find((updatedDog) => updatedDog.id === dog.id),
+    );
+
+    if (newDoggos.length > 0) {
+      updateNeeded = true;
+      updatedDogs = updatedDogs.concat(newDoggos);
+    }
+
+    // Update the doggos if needed
+    if (updateNeeded) {
+      setSpawnedDogs(updatedDogs);
+    }
   };
 
   return (
     <MapView
+      provider="google"
       ref={setMapView}
       style={style}
-      rotateEnabled
+      rotateEnabled={false}
       scrollEnabled={false}
       zoomEnabled={false}
       onPanDrag={rotate}
@@ -145,17 +193,7 @@ export default function Map({ navigation, style }) {
       showsBuildings
       showsCompass={false}
       showsMyLocationButton={false}
-      liteMode
     >
-      <MapMarker coordinate={dog} onPress={dogPress}>
-        <View>
-          <Image
-            source={require("../../assets/dog.png")}
-            style={{ width: 40, height: 40 }}
-          />
-        </View>
-      </MapMarker>
-
       {spawnedDogs.map((dog) => (
         <MapMarker
           key={dog.id}
@@ -178,11 +216,3 @@ export default function Map({ navigation, style }) {
     </MapView>
   );
 }
-
-const styles = StyleSheet.create({
-  map: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-  },
-});
