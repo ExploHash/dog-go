@@ -13,7 +13,8 @@ export type SpawnedDog = {
   name: string;
   variantName: string;
   level: number;
-  imgSrc: string;
+  imgSrc?: string;
+  image?: any;
   geoPoint: GeoPoint;
   spawnedAt: string;
 };

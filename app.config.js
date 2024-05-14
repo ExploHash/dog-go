@@ -36,7 +36,7 @@ module.exports = {
       package: "com.explohash.doggo",
       config: {
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+          apiKey: "AIzaSyCiwP-yOPsNwZFMdFXrtVeCyAExxMctxxg"
         },
       },
     },
